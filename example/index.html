@@ -1,0 +1,94 @@
+<html>
+  <head>
+    <title>Logger</title>
+    <script src="./scripts.js"></script>
+    <style>
+      body{
+        margin: 10px;
+      }
+
+      .block{
+        margin: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Logger</h1>
+    <div class="block">
+      <h2>Console</h2>
+      <input type="text" id="text" value="test message">
+      <input type="button" id="info" value="console.info">
+      <input type="button" id="warn" value="console.warn">
+      <input type="button" id="error" value="console.error">
+    </div>
+    <div class="block">
+      <h2>Errors</h2>
+      <input type="button" id="generate-error" value="Generate error">
+      <input type="button" id="generate-uncaught-promise-rejection" value="Generate uncaught promise rejection">
+    </div>
+
+    <!-- FULL SCREEN OVERLAY START -->
+    <script src="../dist/bundle.js"></script>
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <style>
+      .logger-toggle-button{
+        opacity: 0.5;
+        bottom: 0;
+        right: 0;
+        position: fixed;
+      }
+
+      .logger-overlay{
+
+      }
+
+      .logger-toggle-content{
+        position: fixed;
+        overflow: scroll;
+        height: 50%;
+        z-index: 99999999999;
+        opacity: 0.5;
+        top: 0;
+        left: 0;
+        visibility: hidden;
+        display: none;
+      }
+
+      .logger-toggle-content[data-enabled="true"] {
+        visibility: visible;
+        display: block;
+      }
+    </style>
+    <script>
+      $( function() {
+        $( ".draggable" ).draggable({
+          cancel: '.no-drag'
+        });
+      } );
+    </script>
+    <div class="logger-overlay">
+      <div class="logger-toggle-content draggable" data-enabled="false">
+        <h2>Logs</h2>
+        <div class="logger-logs no-drag"></div>
+      </div>
+      <input class="logger-toggle-button btn btn-primary" type="button" value="Show/Hide">
+    </div>
+    <script>
+      document.querySelector('.logger-toggle-button').addEventListener('click', toggleOverlay)
+      function toggleOverlay(){
+        var el = document.querySelector('.logger-toggle-content')
+        if(el.getAttribute('data-enabled') === 'true'){
+          el.setAttribute('data-enabled', 'false')
+        }else{
+          el.setAttribute('data-enabled', 'true')
+        }
+      }
+    </script>
+    <!-- FULL SCREEN OVERLAY END -->
+
+  </body>
+</html>
