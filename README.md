@@ -40,3 +40,7 @@ Do not want for anyone to send data to server endpoint so the following consider
 * single directory storage(avoids any bugs)
 * fixed key passed when setting up server and received in code.
 * session key
+
+## License
+
+MIT
