@@ -13,7 +13,7 @@ function onLoad () {
       output: true
     },
     server: {
-      url: 'localhost:3000/server/node/index.js',
+      url: '../server/node/index.js',
       send: true,
       retryRate: 2000 // ms
     },

@@ -18,6 +18,8 @@ TEST STAGE. INCLUDES INCOMPLETE FEATURES INCLUDING SERVER HANDLING.
 
 ## Example
 
+Default settings assume all files are on the same server.
+
 * ./example/index.html
 
 ## Considerations
