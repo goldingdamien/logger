@@ -30,7 +30,9 @@ Example from [polyfill.io](https://polyfill.io/v2/docs/):
 
 ```
 <script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
-```
+``
+
+Certain errors can not be caught such as type errors without using try catch blocks.
 
 ## Server
 

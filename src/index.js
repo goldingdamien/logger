@@ -16,9 +16,10 @@ class Logger {
   constructor (settings = {}) {
     this.state = {
       sendTimer: null,
-      oldHandles: {}
+      oldHandles: {},//Changed old handles
+      logs: []
     }
-    this.console = {}
+    this.console = []//All old handles
     // Defaults
     this.settings = {
       error: {
@@ -47,7 +48,12 @@ class Logger {
       element: {
         parent: null,
         max: 10000,
-        outputForMobile: false
+        outputForMobile: false,
+        outputForAll: true
+      },
+      memory: {
+        max: 10000,
+        store: true
       }
     }
     this.events = {
@@ -57,12 +63,18 @@ class Logger {
     this._setup(settings)
   }
 
+  /**
+   * Does initial setup
+   */
   _setup (settings = {}) {
     this._setSettings(settings)
     this._setupConsole()
     this._setupErrors()
   }
 
+  /**
+   * Applies settings to currently set settings.
+   */
   _setSettings (settings = {}) {
     this.settings = merge(this.settings, settings)
     // Non-merge-able properties
@@ -70,26 +82,45 @@ class Logger {
   }
 
   /**
-   * Sets up console handles
+   * Sets up console handles.
+   * NO USING console BEFORE THIS.
    */
   _setupConsole () {
+    // Create console object if not exists
+    if(!window.console){
+      this.createMockConsole()
+    }
+
+    // Cache console
+    for(let key in console){
+      this.console[key] = console[key]
+    }
+
+    // Wrap
     const h = this.settings.console.handleNames
     for (let key in h) {
-      this.console[key] = console[key]
+      this.state.oldHandles[key] = console[key]
       this._wrapConsoleHandle(key)
     }
   }
 
+  /**
+   * Setups errors
+   */
   _setupErrors () {
     if (this.settings.error.catchErrors) {
-      window.addEventListener('error', function () {
-        console.error('global error handling', arguments)
+      window.addEventListener('error', (...args) => {
+        const errorData = getErrorFunctionData(...args)
+        errorData.title = 'global error handling'
+        console.error(errorData)
       })
     }
 
     if (this.settings.error.catchUncaughtPromiseRejections) {
-      window.addEventListener('unhandledrejection', function (event) {
-        console.error('Unhandled rejection (promise: ', event.promise, ', reason: ', event.reason, ').')
+      window.addEventListener('unhandledrejection', (event) => {
+        const errorData = getUnhandleRejectionData(event)
+        errorData.title = 'Unhandled rejection for promise'
+        console.error(errorData)
       })
     }
   }
@@ -109,12 +140,18 @@ class Logger {
     const handle = window.console[handleName]
 
     window.console[handleName] = (...args) => {
+      const string = stringify(...args)
+
+      if(this.settings.memory.store){
+        this.storeLogInMemory(handleName, args)
+      }
+
       if (this.settings.server.send && this.settings.server.url) {
         this.sendToServer(...args)
       }
 
-      if (this.settings.element.outputForMobile) {
-        this.outputForMobile(...args)
+      if (this.settings.element.outputForAll || (this.settings.element.outputForMobile && isMobile())) {
+        this.output(string)
       }
 
       // Returns so should be last
@@ -124,6 +161,24 @@ class Logger {
     }
 
     return true
+  }
+
+  /**
+   * Stores log in memory
+   * @param {String} type
+   * @param {Array} args
+   */
+  storeLogInMemory (type, args = []) {
+    if(this.state.logs.length >= this.settings.memory.max){
+      return
+    }
+
+    this.state.logs.push(
+      {
+        type: type,
+        args: args
+      }
+    )
   }
 
   /**
@@ -180,6 +235,14 @@ class Logger {
   }
 
   /**
+   * Log using non-wrapped console functions
+   */
+  log(handleName, ...args){
+    const handle = this.console[handleName]
+    handle(...args)
+  }
+
+  /**
    * Handles local storage max event
    * @param {String} data
    */
@@ -201,34 +264,7 @@ class Logger {
     }
 
     this.sendToServer(item)
-    this.shiftLocalStorage(1)
-  }
-
-  /**
-   * Shifts local storage by shiftCount
-   * @param {Number} shiftCount
-   */
-  shiftLocalStorage (shiftCount) { // ??Utility
-    let i
-
-    // Move to array
-    const data = []
-    const keys = Object.keys(window.localStorage)
-    while (keys.indexOf(String(i)) >= 0) {
-      data[i] = window.localStorage.getItem(String(i))
-      window.localStorage.removeItem(String(i))
-      i++
-    }
-
-    // Remove items
-    for (i = 0; i < shiftCount; i++) {
-      data.shift()
-    }
-
-    // Add back to localStorage
-    for (i = 0; i < data.length; i++) {
-      window.localStorage.setItem(i, data[i])
-    }
+    shiftLocalStorage(1)
   }
 
   /**
@@ -258,25 +294,39 @@ class Logger {
   }
 
   /**
-   * Outputs for mobile devices.
+   * Outputs to DOM.
    * This is useful for when it is not possible to view developer tools.
-   * @param {String} data
+   * MUST BE FORMATTED BEFORE HERE.
+   * @param {String} string
    */
-  outputForMobile (data) {
-    if (isMobile()) {
-      const parent = this.settings.element.parent
-      if (!parent) {
-        return
-      }
+  output (string) {
+    const parent = this.settings.element.parent
+    if (!parent) {
+      return
+    }
 
-      if (parent.children.length >= this.settings.element.max) {
-        return
-      }
+    if (parent.children.length >= this.settings.element.max) {
+      return
+    }
 
-      const element = document.createElement('div')
-      element.textContent = data
+    const element = document.createElement('div')
+    element.textContent = string
 
-      parent.appendChild(element)
+    parent.appendChild(element)
+  }
+
+  /**
+   * Creates mock console object.
+   * Can be used for environments(old IE, etc.) where console may not be initiated.
+   */
+  createMockConsole(){
+    window.console = {
+      info: ()=>{},
+      log: ()=>{},
+      debug: ()=>{},
+      error: ()=>{},
+      trace: ()=>{},
+      warn: ()=>{}
     }
   }
 
@@ -309,5 +359,122 @@ function toString (data) {
 }
 
 function isMobile () {
-  return window.matchMedia('only screen and (max-width: 760px)')
+  return window.matchMedia('only screen and (max-width: 760px)').matches
 }
+
+/**
+   * Shifts local storage by shiftCount using indexes starting from 0
+   * @param {Number} shiftCount
+   */
+  function shiftLocalStorage (shiftCount) {
+    let i
+
+    // Move to array
+    const data = []
+    const keys = Object.keys(window.localStorage)
+    while (keys.indexOf(String(i)) >= 0) {
+      data[i] = window.localStorage.getItem(String(i))
+      window.localStorage.removeItem(String(i))
+      i++
+    }
+
+    // Remove items
+    for (i = 0; i < shiftCount; i++) {
+      data.shift()
+    }
+
+    // Add back to localStorage
+    for (i = 0; i < data.length; i++) {
+      window.localStorage.setItem(i, data[i])
+    }
+  }
+
+  /**
+   * Gets only data(no native objects) as one object.
+   * @see https://developer.mozilla.org/en-US/docs/Web/API/GlobalEventHandlers/onerror
+   * @return {Object}
+   */
+  function getErrorFunctionData(...args){
+
+    //onerror handling
+    if(args.length >= 5 && args[4] instanceof Error){
+      return {
+        message: args[0],
+        source: args[1],
+        lineno: args[2],
+        colno: args[3],
+        error: getErrorData(args[4])
+      }
+    }else if(args[0] instanceof window.ErrorEvent){
+      return getErrorEventData(args[0])
+    }else{
+      this.console.error('unknown error arguments received', ...args)
+      return {}
+    }
+  }
+
+  /**
+   * Gets only data(no native object) as one object.
+   * @param {ErrorEvent}
+   * @return {Object}
+   */
+  function getErrorEventData(errorEvent){
+    return {
+      colno: errorEvent.colno,
+      error: getErrorData(errorEvent.error),
+      filename: errorEvent.filename,
+      lineno: errorEvent.lineno,
+      message: errorEvent.message
+    }
+  }
+
+  /**
+   * Gets only error data(no native objects) as one object
+   * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error
+   * @param {Error} error
+   * @return {Object}
+   */
+  function getErrorData(error){
+    const data = {}
+    const keys = [
+      'message',
+      'name',
+      'description',
+      'number',
+      'fileName',
+      'lineNumber',
+      'columnNumber',
+      'stack'
+    ]
+    keys.forEach(key => {
+      if(error[key] !== undefined){
+        data[key] = error[key]
+      }
+    })
+
+    return data
+  }
+
+  /**
+   * Gets only data form promise rejection event
+   * @see https://developer.mozilla.org/en-US/docs/Web/API/PromiseRejectionEvent
+   * @param {PromiseRejectionEvent} event
+   * @return {Object}
+   */
+  function getUnhandleRejectionData(event){
+    const data = {}
+    if(event.reason instanceof Error){
+      data.reason = getErrorData(event.reason)
+    }else{
+      data.reason = event.reason
+    }
+    return data
+  }
+  
+  function stringify(...args){
+    if(args.length === 1){
+      return JSON.stringify(args[0])
+    }else{
+      return JSON.stringify(args)
+    }
+  }
