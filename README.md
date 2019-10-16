@@ -28,7 +28,7 @@ This library is suitable for less used, older clients due to collecting logs fro
 Therefor, this library should be used in combination with polyfills.
 Example from [polyfill.io](https://polyfill.io/v2/docs/):
 
-```
+```HTML
 <script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
 ``
 
